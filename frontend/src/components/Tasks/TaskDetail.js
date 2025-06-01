@@ -147,19 +147,6 @@ const TaskDetail = () => {
               </button>
             </div>
 
-
-            <div style={{ marginTop: 24 }}>
-              <p style={styles.label}>⚙️ Power-Ups</p>
-              <button style={styles.rightBtn}>GitHub</button>
-              <div style={styles.powerLinks}>
-                <p>Attach Branch</p>
-                <p>Attach Commit</p>
-                <p>Attach Issue</p>
-                <p>Attach Pull Request...</p>
-              </div>
-            </div>
-
-            <button style={{ ...styles.rightBtn, marginTop: 24 }}>🗂 Archive</button>
           </div>
         </div>
       </div>

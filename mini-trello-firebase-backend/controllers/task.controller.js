@@ -24,7 +24,7 @@ exports.getTasks = async (req, res) => {
 // POST /boards/:boardId/cards/:id/tasks
 exports.createTask = async (req, res) => {
   const { boardId, cardId } = req.params;
-  const { title, description } = req.body;
+  const { title, description, status } = req.body;
   const authHeader = req.headers.authorization;
 
   if (!authHeader) {
@@ -40,7 +40,7 @@ exports.createTask = async (req, res) => {
       cardId,
       title,
       description,
-      status: 'New',
+      status,
       ownerId,
       members: [ownerId],
       createdAt: new Date().toISOString()
@@ -331,3 +331,27 @@ exports.deleteGithubAttachment = async (req, res) => {
     res.status(500).json({ error: 'Không thể xóa GitHub attachment' });
   }
 };
+
+exports.changecard = async (req, res) => {
+  const { taskId, boardId } = req.params;
+  const { fromCardId, toCardId } = req.body;
+
+  try {
+    const sourceRef = db.doc(`boards/${boardId}/cards/${fromCardId}/tasks/${taskId}`);
+    const destRef = db.doc(`boards/${boardId}/cards/${toCardId}/tasks/${taskId}`);
+
+    const snapshot = await sourceRef.get();
+    if (!snapshot.exists) {
+      return res.status(404).json({ message: 'Task không tồn tại trong card nguồn.' });
+    }
+
+    const taskData = snapshot.data();
+    await destRef.set(taskData);
+    await sourceRef.delete();
+
+    return res.status(200).json({ message: 'Di chuyển task thành công.' });
+  } catch (error) {
+    console.error('Lỗi khi di chuyển task:', error);
+    return res.status(500).json({ message: 'Đã xảy ra lỗi khi di chuyển task.' });
+  }
+}

@@ -22,6 +22,7 @@ const CardList = () => {
   const [editCardId, setEditCardId] = useState(null);
   const [taskName, setTaskName] = useState('');
   const [taskDescription, setTaskDescription] = useState('');
+  const [taskStatus, setTaskStatus] = useState('');
   const [editTaskId, setEditTaskId] = useState(null);
   const [taskCardId, setTaskCardId] = useState(null);
   const [showInviteModal, setShowInviteModal] = useState(false);
@@ -100,7 +101,6 @@ const CardList = () => {
     try {
       const res = await api.get(`/boards/${boardId}/cards`);
       setCards(res.data);
-      console.log(res.data);
     } catch (error) {
       console.error('Lỗi lấy card', error);
     }
@@ -168,21 +168,25 @@ const CardList = () => {
     if (!taskName.trim()) return alert('Tên công việc không được để trống');
 
     try {
+      // Trường hợp tạo task mới
       await api.post(`/boards/${boardId}/cards/${taskCardId}/tasks`, {
         title: taskName,
-        description: taskDescription
+        description: taskDescription,
+        status: taskStatus
       });
+
+      // Sau khi lưu xong, gọi lại API để cập nhật danh sách cards
       const res1 = await api.get(`/boards/${boardId}/cards`);
       setCards(res1.data);
 
-      // reset modal, form
+      // Reset modal và form
       setShowTaskModal(false);
       setTaskName('');
       setTaskDescription('');
       setEditTaskId(null);
       setTaskCardId(null);
     } catch (error) {
-      console.error('Lỗi lưu task:', error);
+      console.error('Lỗi khi lưu task:', error);
     }
   };
 
@@ -211,6 +215,9 @@ const CardList = () => {
         email_member: inviteEmail,
       });
 
+      const res1 = await api.get(`/boards/${boardId}/cards`);
+      setCards(res1.data);
+
       if (res.data.success) {
         alert("Đã gửi lời mời!");
         setShowInviteModal(false);
@@ -230,9 +237,8 @@ const CardList = () => {
     setShowTaskModal(true);
   };
 
-  const onDragEnd = (result) => {
+  const onDragEnd = async (result) => {
     const { source, destination } = result;
-
     if (!destination) return;
 
     const sourceCardIndex = cards.findIndex(c => c.id === source.droppableId);
@@ -253,6 +259,20 @@ const CardList = () => {
       newCards[sourceCardIndex].tasks = sourceTasks;
       newCards[destCardIndex].tasks = destTasks;
       setCards(newCards);
+
+      // ⚠️ Di chuyển task giữa 2 card trong Firestore
+      try {
+        await api.post(`/boards/${boardId}/cards/${taskCardId}/tasks/${movedTask.id}/move`, {
+          fromCardId: source.droppableId,
+          toCardId: destination.droppableId
+        });
+
+        await api.put(`/boards/${boardId}/cards/${destination.droppableId}/tasks/${movedTask.id}`, {
+        cardId: destination.droppableId
+      });
+      } catch (error) {
+        console.error("Lỗi khi di chuyển task trong Firestore:", error);
+      }
     }
   };
 
@@ -725,8 +745,25 @@ const CardList = () => {
                     />
                     <textarea
                       placeholder="Mô tả (tuỳ chọn)"
-                      value={cardDescription}
+                      value={taskDescription}
                       onChange={e => setTaskDescription(e.target.value)}
+                      rows={4}
+                      style={{
+                        width: '100%',
+                        marginBottom: 16,
+                        padding: 10,
+                        borderRadius: 4,
+                        border: '1px solid #dfe1e6',
+                        fontSize: 14,
+                        resize: 'vertical',
+                        outline: 'none',
+                        boxSizing: 'border-box',
+                      }}
+                    />
+                    <textarea
+                      placeholder="Status"
+                      value={taskStatus}
+                      onChange={e => setTaskStatus(e.target.value)}
                       rows={4}
                       style={{
                         width: '100%',

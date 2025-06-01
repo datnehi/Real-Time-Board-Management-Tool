@@ -13,6 +13,8 @@ router.put('/:taskId', authMiddleware, taskController.updateTask);
 
 router.delete('/:taskId', authMiddleware, taskController.deleteTask);
 
+router.post('/:taskId/move', authMiddleware, taskController.changecard);
+
 router.post('/:taskId/assign', authMiddleware, taskController.assignMemberToTask);
 
 router.get('/:taskId/assign', authMiddleware, taskController.getAssignedMembers);

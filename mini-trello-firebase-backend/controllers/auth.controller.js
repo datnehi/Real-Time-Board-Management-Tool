@@ -131,3 +131,64 @@ exports.githubOAuth = async (req, res) => {
     res.status(500).json({ error: 'GitHub OAuth failed' });
   }
 };
+
+exports.getUser = async (req, res) => {
+  const authHeader = req.headers.authorization;
+
+  if (!authHeader) {
+    return res.status(401).json({ error: 'Không có token' });
+  }
+
+  const token = authHeader.split(' ')[1]; // "Bearer <token>"
+  try {
+    const decoded = jwt.verify(token, process.env.JWT_SECRET);
+    const id = decoded.userId;
+
+    const userRef = db.doc(`users/${id}`);
+    const userSnapshot = await userRef.get();
+
+    if (!userSnapshot.exists) {
+      return res.status(404).json({ message: 'User không tồn tại.' });
+    }
+
+    const userData = userSnapshot.data();
+    return res.status(200).json(userData);
+  } catch (error) {
+    console.error('Lỗi khi lấy user:', error);
+    return res.status(500).json({ message: 'Lỗi server khi lấy user.' });
+  }
+};
+
+exports.updateUser = async (req, res) => {
+  const authHeader = req.headers.authorization;
+
+  if (!authHeader) {
+    return res.status(401).json({ error: 'Không có token' });
+  }
+
+  const token = authHeader.split(' ')[1];
+
+  try {
+    const decoded = jwt.verify(token, process.env.JWT_SECRET);
+    const userId = decoded.userId;
+
+    const { verificationCode } = req.body;
+
+    const userRef = db.doc(`users/${userId}`);
+    const userSnap = await userRef.get();
+
+    if (!userSnap.exists) {
+      return res.status(404).json({ message: 'Người dùng không tồn tại.' });
+    }
+
+    await userRef.update({
+      ...(verificationCode && { verificationCode }),
+    });
+
+    const updatedUser = (await userRef.get()).data();
+    return res.status(200).json({ message: 'Cập nhật thành công.', user: updatedUser });
+  } catch (error) {
+    console.error('Lỗi cập nhật user:', error);
+    return res.status(500).json({ message: 'Lỗi server khi cập nhật user.' });
+  }
+};

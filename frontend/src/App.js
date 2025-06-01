@@ -1,24 +1,57 @@
-import logo from './logo.svg';
-import './App.css';
+import React from 'react';
+import { BrowserRouter, Routes, Route } from 'react-router-dom';
+import BoardList from './components/Boards/BoardList';
+import Login from './components/Auth/Login';
+import { AuthProvider } from './context/AuthContext';
+import Signup from './components/Auth/Signup';
+import CardList from './components/Cards/CardList';
+import Profile from './components/Profile/Profile';
+import ProtectedRoute from './components/ProtectedRoute';
+import TaskDetail from './components/Tasks/TaskDetail';
 
 function App() {
   return (
-    <div className="App">
-      <header className="App-header">
-        <img src={logo} className="App-logo" alt="logo" />
-        <p>
-          Edit <code>src/App.js</code> and save to reload.
-        </p>
-        <a
-          className="App-link"
-          href="https://reactjs.org"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          Learn React
-        </a>
-      </header>
-    </div>
+    <AuthProvider>
+      <BrowserRouter>
+        <Routes>
+          <Route path="/" element={<Login />} />
+          <Route path="/login" element={<Login />} />
+          <Route path="/signup" element={<Signup />} />
+          <Route
+            path="/boardList"
+            element={
+              <ProtectedRoute>
+                <BoardList />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/boards/:boardId/cards"
+            element={
+              <ProtectedRoute>
+                <CardList />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/boards/:boardId/cards/:cardId/tasks/:taskId"
+            element={
+              <ProtectedRoute>
+                < TaskDetail/>
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/profile"
+            element={
+              <ProtectedRoute>
+                <Profile />
+              </ProtectedRoute>
+            }
+          />
+        </Routes>
+      </BrowserRouter>
+    </AuthProvider>
   );
 }
 
