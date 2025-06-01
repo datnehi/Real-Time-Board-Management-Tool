@@ -1,42 +1,65 @@
-const { db, admin } = require('../firebase/firebase');
+const { db } = require('../firebase/firebase');
+const { v4: uuidv4 } = require('uuid');
 
 // GET /boards/:boardId/cards
 exports.getAllCards = async (req, res) => {
   const { boardId } = req.params;
+
   try {
-    const snapshot = await db.collection('boards').doc(boardId).collection('cards').get();
-    const cards = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
-    res.status(200).json(cards);
+    const cardsSnap = await db.collection('boards').doc(boardId)
+      .collection('cards').get();
+
+    const cardsWithTasks = await Promise.all(
+      cardsSnap.docs.map(async (cardDoc) => {
+        const cardData = cardDoc.data();
+        const cardId = cardDoc.id;
+
+        // Lấy tất cả task trong card này
+        const tasksSnap = await db.collection('boards').doc(boardId)
+          .collection('cards').doc(cardId)
+          .collection('tasks').get();
+
+        const tasks = tasksSnap.docs.map(taskDoc => ({
+          id: taskDoc.id,
+          ...taskDoc.data()
+        }));
+
+        return {
+          id: cardId,
+          ...cardData,
+          tasks
+        };
+      })
+    );
+
+    res.status(200).json(cardsWithTasks);
   } catch (err) {
-    res.status(500).json({ error: 'Không thể lấy danh sách thẻ' });
+    console.error('Lỗi khi lấy cards và tasks:', err.message);
+    res.status(500).json({ error: 'Không thể tải danh sách cards và tasks' });
   }
 };
 
 // POST /boards/:boardId/cards
 exports.createCard = async (req, res) => {
   const { boardId } = req.params;
-  const { name, description, createdAt, members = [], tasks_count = 0 } = req.body;
+  const { name, description } = req.body;
 
   try {
     const newCard = {
       name,
       description,
-      createdAt: createdAt || new Date().toISOString(),
-      members,
-      tasks_count,
+      members: [],
+      tasks_count: 0,
+      createdAt: new Date().toISOString()
     };
 
     const docRef = await db.collection('boards').doc(boardId).collection('cards').add(newCard);
 
-    // Emit socket event
-    const io = req.app.get('io');
-    io.to(boardId).emit('card_created', {
-      boardId,
-      cardId: docRef.id,
-      card: newCard
+    res.status(201).json({
+      id: docRef.id,
+      name: newCard.name,
+      description: newCard.description
     });
-
-    res.status(201).json({ id: docRef.id, ...newCard });
   } catch (err) {
     res.status(500).json({ error: 'Không thể tạo thẻ' });
   }
@@ -48,7 +71,13 @@ exports.getCardById = async (req, res) => {
   try {
     const doc = await db.collection('boards').doc(boardId).collection('cards').doc(id).get();
     if (!doc.exists) return res.status(404).json({ error: 'Không tìm thấy thẻ' });
-    res.status(200).json({ id: doc.id, ...doc.data() });
+
+    const data = doc.data();
+    res.status(200).json({
+      id: doc.id,
+      name: data.name,
+      description: data.description
+    });
   } catch (err) {
     res.status(500).json({ error: 'Không thể lấy thẻ' });
   }
@@ -63,13 +92,12 @@ exports.updateCard = async (req, res) => {
     const updatedCard = {
       name,
       description,
-      ...params,
-      updatedAt: new Date().toISOString()
+      ...params
+      // Không thêm updatedAt
     };
 
     await db.collection('boards').doc(boardId).collection('cards').doc(id).update(updatedCard);
 
-    // Emit socket event
     const io = req.app.get('io');
     io.to(boardId).emit('card_updated', {
       boardId,
@@ -90,7 +118,6 @@ exports.deleteCard = async (req, res) => {
   try {
     await db.collection('boards').doc(boardId).collection('cards').doc(id).delete();
 
-    // Emit socket event
     const io = req.app.get('io');
     io.to(boardId).emit('card_deleted', {
       boardId,
@@ -110,10 +137,17 @@ exports.getCardsByUser = async (req, res) => {
     const snapshot = await db.collection('boards').doc(boardId).collection('cards')
       .where('members', 'array-contains', user_id).get();
 
-    const cards = snapshot.docs.map(doc => ({
-      id: doc.id,
-      ...doc.data()
-    }));
+    const cards = snapshot.docs.map(doc => {
+      const data = doc.data();
+      return {
+        id: doc.id,
+        name: data.name,
+        description: data.description,
+        tasks_count: data.tasks_count,
+        members: data.members,
+        createdAt: data.createdAt
+      };
+    });
 
     res.status(200).json(cards);
   } catch (err) {

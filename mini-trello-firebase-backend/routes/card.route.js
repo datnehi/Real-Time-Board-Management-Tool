@@ -1,23 +1,24 @@
 const express = require('express');
 const router = express.Router({ mergeParams: true });
+const authMiddleware = require('../middleware/auth');
 const cardController = require('../controllers/card.controller');
 
 // Lấy tất cả thẻ trong board
-router.get('/', cardController.getAllCards);
+router.get('/', authMiddleware, cardController.getAllCards);
 
-// Tạo thẻ mới trong board
-router.post('/', cardController.createCard);
+// Tạo thẻ mới
+router.post('/', authMiddleware, cardController.createCard);
 
-// Lấy chi tiết 1 thẻ
-router.get('/:id', cardController.getCardById);
+// Lấy thông tin chi tiết của 1 thẻ
+router.get('/:id', authMiddleware, cardController.getCardById);
 
 // Cập nhật thẻ
-router.put('/:id', cardController.updateCard);
+router.put('/:id', authMiddleware, cardController.updateCard);
 
-// Xoá thẻ
-router.delete('/:id', cardController.deleteCard);
+// Xóa thẻ
+router.delete('/:id', authMiddleware, cardController.deleteCard);
 
-// Lấy thẻ theo user
-router.get('/user/:user_id', cardController.getCardsByUser);
+// Lấy các thẻ theo user
+router.get('/user/:user_id', authMiddleware, cardController.getCardsByUser);
 
 module.exports = router;

@@ -27,8 +27,6 @@ app.use('/auth', require('./routes/auth.route'));
 app.use('/boards', require('./routes/board.route'));
 app.use('/boards/:boardId/cards', require('./routes/card.route'));
 app.use('/boards/:boardId/cards/:cardId/tasks', require('./routes/task.route'));
-app.use('/boards/:boardId/cards/:cardId/tasks/:taskId/assign', require('./routes/assign.route'));
-app.use('/', require('./routes/github.route')); // routes GitHub API
 
 // SOCKET.IO connection
 io.on('connection', (socket) => {
