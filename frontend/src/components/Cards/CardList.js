@@ -12,11 +12,9 @@ const CardList = () => {
   const [cards, setCards] = useState([]);
   const [loading, setLoading] = useState(false);
 
-  // Modal state
   const [showCardModal, setShowCardModal] = useState(false);
   const [showTaskModal, setShowTaskModal] = useState(false);
 
-  // Form inputs
   const [cardName, setCardName] = useState('');
   const [cardDescription, setCardDescription] = useState('');
   const [editCardId, setEditCardId] = useState(null);
@@ -50,7 +48,6 @@ const CardList = () => {
     fetchCards();
     fetchBoardMembers();
 
-    // Listen socket update for realtime sync
     socket.on('card_updated', updatedCard => {
       setCards(prev => prev.map(c => (c.id === updatedCard.id ? updatedCard : c)));
     });
@@ -107,19 +104,16 @@ const CardList = () => {
     setLoading(false);
   }
 
-  // Thêm hoặc sửa card
   const handleSaveCard = async () => {
     if (!cardName.trim()) return alert('Tên thẻ không được để trống');
     try {
       if (editCardId) {
-        // Sửa card
         const res = await api.put(`/boards/${boardId}/cards/${editCardId}`, {
           name: cardName,
           description: cardDescription,
         });
         setCards(cards.map(c => (c.id === editCardId ? res.data : c)));
       } else {
-        // Tạo mới
         const res = await api.post(`/boards/${boardId}/cards`, {
           name: cardName,
           description: cardDescription,
@@ -135,7 +129,6 @@ const CardList = () => {
     }
   };
 
-  // Xoá card
   const handleDeleteCard = async (cardId) => {
     if (!window.confirm('Bạn có chắc muốn xoá thẻ này?')) return;
     try {
@@ -146,7 +139,6 @@ const CardList = () => {
     }
   };
 
-  // Mở modal sửa card
   const openEditCardModal = (card) => {
     setCardName(card.name);
     setCardDescription(card.description || '');
@@ -154,7 +146,6 @@ const CardList = () => {
     setShowCardModal(true);
   };
 
-  // Modal thêm task
   const openAddTaskModal = (cardId) => {
     setTaskCardId(cardId);
     setTaskName('');
@@ -163,23 +154,19 @@ const CardList = () => {
     setShowTaskModal(true);
   };
 
-  // Thêm hoặc sửa task
   const handleSaveTask = async () => {
     if (!taskName.trim()) return alert('Tên công việc không được để trống');
 
     try {
-      // Trường hợp tạo task mới
       await api.post(`/boards/${boardId}/cards/${taskCardId}/tasks`, {
         title: taskName,
         description: taskDescription,
         status: taskStatus
       });
 
-      // Sau khi lưu xong, gọi lại API để cập nhật danh sách cards
       const res1 = await api.get(`/boards/${boardId}/cards`);
       setCards(res1.data);
 
-      // Reset modal và form
       setShowTaskModal(false);
       setTaskName('');
       setTaskDescription('');
@@ -190,7 +177,6 @@ const CardList = () => {
     }
   };
 
-  // Xoá task
   const handleDeleteTask = async (taskId, cardId) => {
     if (!window.confirm('Bạn có chắc muốn xoá công việc này?')) return;
     try {
@@ -228,7 +214,6 @@ const CardList = () => {
     }
   };
 
-  // Mở modal sửa task
   const openEditTaskModal = (task, cardId) => {
     setTaskName(task.name);
     setTaskDescription(task.description);
@@ -260,7 +245,6 @@ const CardList = () => {
       newCards[destCardIndex].tasks = destTasks;
       setCards(newCards);
 
-      // ⚠️ Di chuyển task giữa 2 card trong Firestore
       try {
         await api.post(`/boards/${boardId}/cards/${taskCardId}/tasks/${movedTask.id}/move`, {
           fromCardId: source.droppableId,
@@ -279,7 +263,6 @@ const CardList = () => {
   return (
     <DashboardLayout>
       <div style={{ display: 'flex' }}>
-        {/* Sidebar Member Filter */}
         <div style={{ width: 220, paddingRight: 16 }}>
           <h4 style={{ fontWeight: 600, color: '#172b4d', marginBottom: 12 }}>Thành viên</h4>
           <button
@@ -533,7 +516,6 @@ const CardList = () => {
                   ))}
                 </div>
               </DragDropContext>
-              {/* Modal mời thành viên */}
               {showInviteModal && (
                 <div style={{
                   position: 'fixed',
@@ -595,7 +577,6 @@ const CardList = () => {
                 </div>
               )}
 
-              {/* Modal Thêm / Sửa Card */}
               {showCardModal && (
                 <div
                   style={{
@@ -699,7 +680,6 @@ const CardList = () => {
                 </div>
               )}
 
-              {/* Modal Thêm / Sửa Task */}
               {showTaskModal && (
                 <div
                   style={{

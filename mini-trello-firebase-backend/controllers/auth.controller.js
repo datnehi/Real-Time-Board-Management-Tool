@@ -9,12 +9,10 @@ exports.sendVerificationCode = async (req, res) => {
   const { email } = req.body;
   const code = Math.floor(100000 + Math.random() * 900000).toString();
 
-  // Kiểm tra xem user đã tồn tại chưa
   const snapshot = await db.collection('users').where('email', '==', email).get();
   let userRef;
 
   if (snapshot.empty) {
-    // Tạo user mới với uuid
     const userId = uuidv4();
     userRef = db.collection('users').doc(userId);
     await userRef.set({
@@ -25,7 +23,6 @@ exports.sendVerificationCode = async (req, res) => {
       createdAt: new Date().toISOString(),
     });
   } else {
-    // Cập nhật mã code mới
     userRef = snapshot.docs[0].ref;
     await userRef.update({
       verificationCode: code,
@@ -62,7 +59,6 @@ exports.signup = async (req, res) => {
 exports.signin = async (req, res) => {
   const { email, verificationCode } = req.body;
 
-  // Tìm user theo email
   const snapshot = await db.collection('users').where('email', '==', email).get();
 
   if (snapshot.empty) {
@@ -82,12 +78,10 @@ exports.signin = async (req, res) => {
 };
 
 
-// GitHub OAuth
 exports.githubOAuth = async (req, res) => {
   const { code } = req.body;
 
   try {
-    // Exchange GitHub code for access token
     const tokenResponse = await axios.post(`https://github.com/login/oauth/access_token`, null, {
       params: {
         client_id: process.env.GITHUB_CLIENT_ID,
@@ -102,7 +96,6 @@ exports.githubOAuth = async (req, res) => {
     const accessToken = tokenResponse.data.access_token;
     if (!accessToken) return res.status(401).json({ error: 'GitHub auth failed' });
 
-    // Get GitHub user profile
     const profileResponse = await axios.get('https://api.github.com/user', {
       headers: {
         Authorization: `Bearer ${accessToken}`,
@@ -111,7 +104,6 @@ exports.githubOAuth = async (req, res) => {
 
     const githubEmail = profileResponse.data.email || profileResponse.data.login;
 
-    // Save to Firestore (if chưa có)
     const userRef = db.collection('users').doc(githubEmail);
     const doc = await userRef.get();
     if (!doc.exists) {
@@ -139,7 +131,7 @@ exports.getUser = async (req, res) => {
     return res.status(401).json({ error: 'Không có token' });
   }
 
-  const token = authHeader.split(' ')[1]; // "Bearer <token>"
+  const token = authHeader.split(' ')[1]; 
   try {
     const decoded = jwt.verify(token, process.env.JWT_SECRET);
     const id = decoded.userId;

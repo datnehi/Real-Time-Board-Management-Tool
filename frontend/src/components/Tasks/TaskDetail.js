@@ -73,7 +73,7 @@ const TaskDetail = () => {
     const fetchTaskMembers = async () => {
       try {
         const res = await api.get(`/boards/${boardId}/cards/${cardId}/tasks/${taskId}/assign`);
-        setTaskMembers(res.data); // res.data là mảng các object { taskId, memberId }
+        setTaskMembers(res.data); 
       } catch (err) {
         console.error('Failed to fetch task members:', err);
       }
@@ -87,7 +87,6 @@ const TaskDetail = () => {
       await api.post(`/boards/${boardId}/cards/${cardId}/tasks/${taskId}/assign`, {
         memberId
       });
-      // Cập nhật lại danh sách sau khi thêm
       setTaskMembers((prev) => [...prev, { taskId, memberId }]);
     } catch (err) {
       console.error('Failed to assign member:', err);
@@ -109,7 +108,6 @@ const TaskDetail = () => {
 
         <div style={styles.row}>
           <div style={styles.sectionLeft}>
-            {/* Description */}
             <div style={styles.section}>
               <h4 style={styles.label}>📝 Description</h4>
               <textarea
@@ -131,7 +129,6 @@ const TaskDetail = () => {
             </div>
           </div>
 
-          {/* Right Column */}
           <div style={styles.sectionRight}>
             <div>
               <p style={styles.label}>👥 Members</p>
@@ -197,7 +194,6 @@ const TaskDetail = () => {
   );
 }
 
-// STYLE OBJECTS
 const styles = {
   overlay: {
     backgroundColor: '#000000aa',

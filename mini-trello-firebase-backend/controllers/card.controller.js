@@ -1,7 +1,6 @@
 const { db } = require('../firebase/firebase');
 const { v4: uuidv4 } = require('uuid');
 
-// GET /boards/:boardId/cards
 exports.getAllCards = async (req, res) => {
   const { boardId } = req.params;
 
@@ -14,7 +13,6 @@ exports.getAllCards = async (req, res) => {
         const cardData = cardDoc.data();
         const cardId = cardDoc.id;
 
-        // Lấy tất cả task trong card này
         const tasksSnap = await db.collection('boards').doc(boardId)
           .collection('cards').doc(cardId)
           .collection('tasks').get();
@@ -39,7 +37,6 @@ exports.getAllCards = async (req, res) => {
   }
 };
 
-// POST /boards/:boardId/cards
 exports.createCard = async (req, res) => {
   const { boardId } = req.params;
   const { name, description } = req.body;
@@ -65,7 +62,6 @@ exports.createCard = async (req, res) => {
   }
 };
 
-// GET /boards/:boardId/cards/:id
 exports.getCardById = async (req, res) => {
   const { boardId, id } = req.params;
   try {
@@ -83,7 +79,6 @@ exports.getCardById = async (req, res) => {
   }
 };
 
-// PUT /boards/:boardId/cards/:id
 exports.updateCard = async (req, res) => {
   const { boardId, id } = req.params;
   const { name, description, ...params } = req.body;
@@ -93,7 +88,6 @@ exports.updateCard = async (req, res) => {
       name,
       description,
       ...params
-      // Không thêm updatedAt
     };
 
     await db.collection('boards').doc(boardId).collection('cards').doc(id).update(updatedCard);
@@ -111,7 +105,6 @@ exports.updateCard = async (req, res) => {
   }
 };
 
-// DELETE /boards/:boardId/cards/:id
 exports.deleteCard = async (req, res) => {
   const { boardId, id } = req.params;
 
@@ -130,7 +123,6 @@ exports.deleteCard = async (req, res) => {
   }
 };
 
-// GET /boards/:boardId/cards/user/:user_id
 exports.getCardsByUser = async (req, res) => {
   const { boardId, user_id } = req.params;
   try {

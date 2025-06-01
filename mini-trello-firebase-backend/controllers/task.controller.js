@@ -6,9 +6,8 @@ const octokit = new Octokit({
   auth: process.env.GITHUB_TOKEN
 });
 
-// GET /boards/:boardId/cards/:id/tasks
 exports.getTasks = async (req, res) => {
-  const { boardId, id: cardId } = req.params; // chú ý param là id, không phải cardId
+  const { boardId, id: cardId } = req.params; 
   try {
     const snapshot = await db.collection('boards').doc(boardId)
       .collection('cards').doc(cardId)
@@ -21,7 +20,6 @@ exports.getTasks = async (req, res) => {
   }
 };
 
-// POST /boards/:boardId/cards/:id/tasks
 exports.createTask = async (req, res) => {
   const { boardId, cardId } = req.params;
   const { title, description, status } = req.body;
@@ -50,7 +48,6 @@ exports.createTask = async (req, res) => {
       .collection('cards').doc(cardId)
       .collection('tasks').add(newTask);
 
-    // Emit socket
     const io = req.app.get('io');
     io.to(boardId).emit('task_created', {
       boardId,
@@ -65,7 +62,6 @@ exports.createTask = async (req, res) => {
   }
 };
 
-// GET /boards/:boardId/cards/:id/tasks/:taskId
 exports.getTaskById = async (req, res) => {
   const { boardId, cardId, taskId } = req.params;
   try {
@@ -83,7 +79,6 @@ exports.getTaskById = async (req, res) => {
   }
 };
 
-// PUT /boards/:boardId/cards/:id/tasks/:taskId
 exports.updateTask = async (req, res) => {
   const { boardId, cardId, taskId } = req.params;
   const updates = req.body;
@@ -104,7 +99,6 @@ exports.updateTask = async (req, res) => {
 
     await taskRef.update(updatedTask);
 
-    // Emit socket
     const io = req.app.get('io');
     io.to(boardId).emit('task_updated', {
       boardId,
@@ -119,7 +113,6 @@ exports.updateTask = async (req, res) => {
   }
 };
 
-// DELETE /boards/:boardId/cards/:id/tasks/:taskId
 exports.deleteTask = async (req, res) => {
   const { boardId, cardId, taskId } = req.params;
 
@@ -128,7 +121,6 @@ exports.deleteTask = async (req, res) => {
       .collection('cards').doc(cardId)
       .collection('tasks').doc(taskId).delete();
 
-    // Emit socket
     const io = req.app.get('io');
     io.to(boardId).emit('task_deleted', {
       boardId,
@@ -142,7 +134,6 @@ exports.deleteTask = async (req, res) => {
   }
 };
 
-// POST /boards/:boardId/cards/:id/tasks/:taskId/assign
 exports.assignMemberToTask = async (req, res) => {
   const { boardId, cardId, taskId } = req.params;
   const { memberId } = req.body;
@@ -163,7 +154,6 @@ exports.assignMemberToTask = async (req, res) => {
       assignedAt: new Date().toISOString()
     });
 
-    // Emit socket
     const io = req.app.get('io');
     io.to(boardId).emit('task_member_assigned', { boardId, cardId, taskId, memberId });
 
@@ -173,7 +163,6 @@ exports.assignMemberToTask = async (req, res) => {
   }
 };
 
-// GET /boards/:boardId/cards/:id/tasks/:taskId/assign
 exports.getAssignedMembers = async (req, res) => {
   const { boardId, cardId, taskId } = req.params;
 
@@ -191,7 +180,6 @@ exports.getAssignedMembers = async (req, res) => {
   }
 };
 
-// DELETE /boards/:boardId/cards/:id/tasks/:taskId/assign/:memberId
 exports.removeAssignedMember = async (req, res) => {
   const { boardId, cardId, taskId, memberId } = req.params;
 
@@ -201,7 +189,6 @@ exports.removeAssignedMember = async (req, res) => {
       .collection('tasks').doc(taskId)
       .collection('assignments').doc(memberId).delete();
 
-    // Emit socket
     const io = req.app.get('io');
     io.to(boardId).emit('task_member_removed', { boardId, cardId, taskId, memberId });
 
@@ -211,7 +198,6 @@ exports.removeAssignedMember = async (req, res) => {
   }
 };
 
-// 9. GET /repositories/:repositoryId/github-info
 exports.getRepositoryGithubInfo = async (req, res) => {
   const { repositoryId } = req.params;
 
@@ -260,7 +246,6 @@ exports.getRepositoryGithubInfo = async (req, res) => {
   }
 };
 
-// 10. POST /boards/:boardId/cards/:cardId/tasks/:taskId/github-attach
 exports.attachGithubToTask = async (req, res) => {
   const { boardId, cardId, taskId } = req.params;
   const { type, number, sha } = req.body;
@@ -293,7 +278,6 @@ exports.attachGithubToTask = async (req, res) => {
   }
 };
 
-// 11. GET /boards/:boardId/cards/:cardId/tasks/:taskId/github-attachments
 exports.getGithubAttachments = async (req, res) => {
   const { boardId, cardId, taskId } = req.params;
 
@@ -315,7 +299,6 @@ exports.getGithubAttachments = async (req, res) => {
   }
 };
 
-// 12. DELETE /boards/:boardId/cards/:cardId/tasks/:taskId/github-attachments/:attachmentId
 exports.deleteGithubAttachment = async (req, res) => {
   const { boardId, cardId, taskId, attachmentId } = req.params;
 

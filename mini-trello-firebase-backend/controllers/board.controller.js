@@ -10,7 +10,7 @@ exports.createBoard = async (req, res) => {
     return res.status(401).json({ error: 'Không có token' });
   }
 
-  const token = authHeader.split(' ')[1]; // "Bearer <token>"
+  const token = authHeader.split(' ')[1]; 
   try {
     const decoded = jwt.verify(token, process.env.JWT_SECRET);
     const ownerId = decoded.userId;
@@ -39,25 +39,21 @@ exports.createBoard = async (req, res) => {
   }
 };
 
-// GET /boards
 exports.getBoards = async (req, res) => {
   try {
-    const userId = req.user?.id; // Hoặc lấy từ req.userId tuỳ cách bạn set middleware auth
+    const userId = req.user?.id; 
     if (!userId) {
       return res.status(401).json({ error: 'User chưa xác thực' });
     }
 
-    // Query boards mà user là owner
     const ownerBoardsSnap = await db.collection('boards')
       .where('ownerId', '==', userId)
       .get();
 
-    // Query boards mà user là thành viên trong mảng members
     const memberBoardsSnap = await db.collection('boards')
       .where('members', 'array-contains', userId)
       .get();
 
-    // Gộp 2 list board, tránh trùng
     const boardsMap = new Map();
 
     ownerBoardsSnap.docs.forEach(doc => {
@@ -68,7 +64,6 @@ exports.getBoards = async (req, res) => {
       boardsMap.set(doc.id, { id: doc.id, ...doc.data() });
     });
 
-    // Chuyển Map thành array và trả về
     const boards = Array.from(boardsMap.values());
 
     res.status(200).json(boards);
@@ -78,7 +73,6 @@ exports.getBoards = async (req, res) => {
   }
 };
 
-// GET /boards/:boardId/members
 exports.getMembers = async (req, res) => {
   try {
     const { boardId } = req.params;
@@ -94,16 +88,14 @@ exports.getMembers = async (req, res) => {
     const memberIds = boardData.members || [];
     const createdBy = boardData.createdBy;
 
-    // Đảm bảo người tạo cũng nằm trong danh sách
     if (createdBy && !memberIds.includes(createdBy)) {
       memberIds.push(createdBy);
     }
 
     if (memberIds.length === 0) {
-      return res.json([]); // Không có ai
+      return res.json([]); 
     }
 
-    // Lấy thông tin người dùng
     const userFetches = memberIds.map(uid =>
       db.collection('users').doc(uid).get()
     );
@@ -123,7 +115,6 @@ exports.getMembers = async (req, res) => {
   }
 };
 
-// GET /boards/:id
 exports.getBoardById = async (req, res) => {
   const { id } = req.params;
   if (!id) return res.status(400).json({ error: 'Board id là bắt buộc' });
@@ -139,7 +130,6 @@ exports.getBoardById = async (req, res) => {
   }
 };
 
-// PUT /boards/:id
 exports.updateBoard = async (req, res) => {
   const { id } = req.params;
   const { name, description } = req.body;
@@ -157,7 +147,6 @@ exports.updateBoard = async (req, res) => {
 
     await db.collection('boards').doc(id).update(updates);
 
-    // Emit sự kiện qua socket.io (nếu có)
     const io = req.app.get('io');
     if (io) {
       io.emit('board_updated', { boardId: id, updates });
@@ -170,7 +159,6 @@ exports.updateBoard = async (req, res) => {
   }
 };
 
-// DELETE /boards/:id
 exports.deleteBoard = async (req, res) => {
   const { id } = req.params;
   if (!id) return res.status(400).json({ error: 'Board id là bắt buộc' });
@@ -190,7 +178,6 @@ exports.deleteBoard = async (req, res) => {
   }
 };
 
-// POST /boards/:boardId/invite
 exports.inviteToBoard = async (req, res) => {
   const { boardId } = req.params;
   const { invite_id, board_owner_id, member_id, email_member, status } = req.body;
@@ -230,9 +217,8 @@ exports.inviteToBoard = async (req, res) => {
   }
 };
 
-// POST /boards/:boardId/cards/:id/invite/accept
 exports.acceptBoardInvite = async (req, res) => {
-  const { boardId, id: cardId } = req.params; // cardId có dùng không?
+  const { boardId, id: cardId } = req.params;
   const { invite_id, member_id, status } = req.body;
 
   if (!boardId || !invite_id || !member_id || !status) {
@@ -240,13 +226,11 @@ exports.acceptBoardInvite = async (req, res) => {
   }
 
   try {
-    // Cập nhật trạng thái lời mời
     await db.collection('boards').doc(boardId)
       .collection('invites')
       .doc(invite_id)
       .update({ status });
 
-    // Thêm member vào board
     const boardRef = db.collection('boards').doc(boardId);
     await boardRef.update({
       members: admin.firestore.FieldValue.arrayUnion(member_id)
@@ -282,7 +266,6 @@ exports.inviteMember = async (req, res) => {
       createdAt: new Date().toISOString()
     };
 
-    // Lưu lời mời vào subcollection "invitations"
     await db.collection('invitations').doc(invite_id).set(inviteData);
 
     res.status(200).json({ success: true });
@@ -314,11 +297,9 @@ exports.respondToInvitation = async (req, res) => {
       return res.status(404).json({ error: 'Không tìm thấy lời mời' });
     }
 
-    // Cập nhật trạng thái
     await invitationRef.update({ status });
 
     if (status === 'accepted') {
-      // Thêm member vào thẻ
       const cardRef = db.collection('boards').doc(boardId);
       await cardRef.update({
         members: admin.firestore.FieldValue.arrayUnion(userId)
@@ -351,7 +332,6 @@ exports.getInvitations = async (req, res) => {
     const decoded = jwt.verify(token, process.env.JWT_SECRET);
     const userId = decoded.userId;
 
-    // 🔍 Tìm user theo userId để lấy email
     const snapshot = await db.collection('users').where('userId', '==', userId).get();
 
     if (snapshot.empty) {
