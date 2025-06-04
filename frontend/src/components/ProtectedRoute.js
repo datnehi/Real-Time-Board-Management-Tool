@@ -6,14 +6,18 @@ const ProtectedRoute = ({ children }) => {
   const { user, loading } = useAuth();
 
   if (loading) {
-    return <div>Loading...</div>;
+    return (
+      <div style={{ padding: '2rem', textAlign: 'center' }}>
+        <h3>🔐 Đang xác thực...</h3>
+      </div>
+    );
   }
 
   if (!user) {
     return <Navigate to="/login" replace />;
   }
 
-  return children;
+  return children || null;
 };
 
 export default ProtectedRoute;

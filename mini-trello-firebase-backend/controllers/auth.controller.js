@@ -78,58 +78,54 @@ exports.signin = async (req, res) => {
 };
 
 
-exports.githubOAuth = async (req, res) => {
-  const { code } = req.body;
+// exports.githubOAuth = async (req, res) => {
+//   const { code } = req.body;
 
-  try {
-    const tokenResponse = await axios.post(`https://github.com/login/oauth/access_token`, null, {
-      params: {
-        client_id: process.env.GITHUB_CLIENT_ID,
-        client_secret: process.env.GITHUB_CLIENT_SECRET,
-        code,
-      },
-      headers: {
-        accept: 'application/json',
-      },
-    });
+//   try {
+//     const tokenResponse = await axios.post(`https://github.com/login/oauth/access_token`, null, {
+//       params: {
+//         client_id: process.env.GITHUB_CLIENT_ID,
+//         client_secret: process.env.GITHUB_CLIENT_SECRET,
+//         code,
+//       },
+//       headers: {
+//         accept: 'application/json',
+//       },
+//     });
 
-    const accessToken = tokenResponse.data.access_token;
-    if (!accessToken) return res.status(401).json({ error: 'GitHub auth failed' });
+//     const accessToken = tokenResponse.data.access_token;
+//     if (!accessToken) return res.status(401).json({ error: 'GitHub auth failed' });
 
-    const profileResponse = await axios.get('https://api.github.com/user', {
-      headers: {
-        Authorization: `Bearer ${accessToken}`,
-      },
-    });
+//     const profileResponse = await axios.get('https://api.github.com/user', {
+//       headers: {
+//         Authorization: `Bearer ${accessToken}`,
+//       },
+//     });
 
-    const githubEmail = profileResponse.data.email || profileResponse.data.login;
+//     const githubEmail = profileResponse.data.email || profileResponse.data.login;
 
-    const userRef = db.collection('users').doc(githubEmail);
-    const doc = await userRef.get();
-    if (!doc.exists) {
-      await userRef.set({
-        email: githubEmail,
-        githubId: profileResponse.data.id,
-        verified: true,
-        createdAt: new Date().toISOString(),
-      });
-    }
+//     const userRef = db.collection('users').doc(githubEmail);
+//     const doc = await userRef.get();
+//     if (!doc.exists) {
+//       await userRef.set({
+//         email: githubEmail,
+//         githubId: profileResponse.data.id,
+//         verified: true,
+//         createdAt: new Date().toISOString(),
+//       });
+//     }
 
-    const token = jwt.sign({ userId: githubEmail }, process.env.JWT_SECRET, { expiresIn: '7d' });
-    res.status(200).json({ accessToken: token });
+//     const token = jwt.sign({ userId: githubEmail }, process.env.JWT_SECRET, { expiresIn: '7d' });
+//     res.status(200).json({ accessToken: token });
 
-  } catch (err) {
-    console.error(err.message);
-    res.status(500).json({ error: 'GitHub OAuth failed' });
-  }
-};
+//   } catch (err) {
+//     console.error(err.message);
+//     res.status(500).json({ error: 'GitHub OAuth failed' });
+//   }
+// };
 
 exports.getUser = async (req, res) => {
   const authHeader = req.headers.authorization;
-
-  if (!authHeader) {
-    return res.status(401).json({ error: 'Không có token' });
-  }
 
   const token = authHeader.split(' ')[1]; 
   try {
@@ -153,10 +149,6 @@ exports.getUser = async (req, res) => {
 
 exports.updateUser = async (req, res) => {
   const authHeader = req.headers.authorization;
-
-  if (!authHeader) {
-    return res.status(401).json({ error: 'Không có token' });
-  }
 
   const token = authHeader.split(' ')[1];
 

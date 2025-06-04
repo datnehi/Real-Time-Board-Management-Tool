@@ -108,11 +108,12 @@ const CardList = () => {
     if (!cardName.trim()) return alert('Tên thẻ không được để trống');
     try {
       if (editCardId) {
-        const res = await api.put(`/boards/${boardId}/cards/${editCardId}`, {
+        await api.put(`/boards/${boardId}/cards/${editCardId}`, {
           name: cardName,
           description: cardDescription,
         });
-        setCards(cards.map(c => (c.id === editCardId ? res.data : c)));
+        const res1 = await api.get(`/boards/${boardId}/cards`);
+        setCards(res1.data);
       } else {
         const res = await api.post(`/boards/${boardId}/cards`, {
           name: cardName,
@@ -229,6 +230,8 @@ const CardList = () => {
     const sourceCardIndex = cards.findIndex(c => c.id === source.droppableId);
     const destCardIndex = cards.findIndex(c => c.id === destination.droppableId);
 
+    if (sourceCardIndex === -1 || destCardIndex === -1) return;
+
     const sourceTasks = Array.from(cards[sourceCardIndex].tasks);
     const [movedTask] = sourceTasks.splice(source.index, 1);
 
@@ -240,22 +243,26 @@ const CardList = () => {
     } else {
       const destTasks = Array.from(cards[destCardIndex].tasks);
       destTasks.splice(destination.index, 0, movedTask);
+
+      movedTask.cardId = destination.droppableId;
+
       const newCards = [...cards];
       newCards[sourceCardIndex].tasks = sourceTasks;
       newCards[destCardIndex].tasks = destTasks;
       setCards(newCards);
 
       try {
-        await api.post(`/boards/${boardId}/cards/${taskCardId}/tasks/${movedTask.id}/move`, {
+        await api.post(`/boards/${boardId}/cards/${source.droppableId}/tasks/${movedTask.id}/move`, {
           fromCardId: source.droppableId,
           toCardId: destination.droppableId
         });
 
         await api.put(`/boards/${boardId}/cards/${destination.droppableId}/tasks/${movedTask.id}`, {
-        cardId: destination.droppableId
-      });
+          cardId: destination.droppableId
+        });
       } catch (error) {
         console.error("Lỗi khi di chuyển task trong Firestore:", error);
+        await fetchCards();
       }
     }
   };
@@ -516,6 +523,7 @@ const CardList = () => {
                   ))}
                 </div>
               </DragDropContext>
+
               {showInviteModal && (
                 <div style={{
                   position: 'fixed',

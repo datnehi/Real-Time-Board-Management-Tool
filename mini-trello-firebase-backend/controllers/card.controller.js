@@ -32,7 +32,6 @@ exports.getAllCards = async (req, res) => {
 
     res.status(200).json(cardsWithTasks);
   } catch (err) {
-    console.error('Lỗi khi lấy cards và tasks:', err.message);
     res.status(500).json({ error: 'Không thể tải danh sách cards và tasks' });
   }
 };
@@ -52,6 +51,15 @@ exports.createCard = async (req, res) => {
 
     const docRef = await db.collection('boards').doc(boardId).collection('cards').add(newCard);
 
+    const io = req.app.get('io');
+    io.to(boardId).emit('card_created', {
+      boardId,
+      card: {
+        id: docRef.id,
+        ...newCard
+      }
+    });
+    
     res.status(201).json({
       id: docRef.id,
       name: newCard.name,

@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import api from '../../services/api';
+import socket from '../../services/socket';
 
 const TaskDetail = () => {
   const { boardId, cardId, taskId } = useParams();
@@ -14,27 +15,36 @@ const TaskDetail = () => {
 
 
   useEffect(() => {
-    const fetchTaskMembers = async () => {
-      try {
-        const res = await api.get(`/boards/${boardId}/cards/${cardId}/tasks/${taskId}/assign`);
-        setTaskMembers(res.data);
-      } catch (err) {
-        console.error('Lỗi khi lấy thành viên của task:', err);
-      }
-    };
-
-    const fetchBoardMembers = async () => {
-      try {
-        const res = await api.get(`/boards/${boardId}/members`);
-        setBoardMembers(res.data);
-      } catch (err) {
-        console.error('Lỗi khi lấy thành viên của board:', err);
-      }
-    };
-
     fetchTask();
     fetchTaskMembers();
     fetchBoardMembers();
+    const handleMemberAssigned = ({ taskId: tId, memberId }) => {
+      if (tId === taskId) {
+        setTaskMembers((prev) => [...prev, { taskId: tId, memberId }]);
+      }
+    };
+
+    const handleMemberRemoved = ({ taskId: tId, memberId }) => {
+      if (tId === taskId) {
+        setTaskMembers((prev) => prev.filter((m) => m.memberId !== memberId));
+      }
+    };
+
+    const handleTaskUpdated = ({ taskId: tId, updates }) => {
+      if (tId === taskId) {
+        setTask((prev) => ({ ...prev, ...updates }));
+      }
+    };
+
+    socket.on('task_member_assigned', handleMemberAssigned);
+    socket.on('task_member_removed', handleMemberRemoved);
+    socket.on('task_updated', handleTaskUpdated);
+
+    return () => {
+      socket.off('task_member_assigned', handleMemberAssigned);
+      socket.off('task_member_removed', handleMemberRemoved);
+      socket.off('task_updated', handleTaskUpdated);
+    };
   }, [boardId, cardId, taskId]);
 
   const fetchTask = async () => {
@@ -45,6 +55,24 @@ const TaskDetail = () => {
       setNewStatus(res.data.status || '');
     } catch (err) {
       console.error('Lỗi khi lấy task:', err);
+    }
+  };
+
+  const fetchTaskMembers = async () => {
+    try {
+      const res = await api.get(`/boards/${boardId}/cards/${cardId}/tasks/${taskId}/assign`);
+      setTaskMembers(res.data);
+    } catch (err) {
+      console.error('Lỗi khi lấy thành viên của task:', err);
+    }
+  };
+
+  const fetchBoardMembers = async () => {
+    try {
+      const res = await api.get(`/boards/${boardId}/members`);
+      setBoardMembers(res.data);
+    } catch (err) {
+      console.error('Lỗi khi lấy thành viên của board:', err);
     }
   };
 
@@ -68,19 +96,6 @@ const TaskDetail = () => {
       console.error('Lỗi khi xóa thành viên:', err);
     }
   };
-
-  useEffect(() => {
-    const fetchTaskMembers = async () => {
-      try {
-        const res = await api.get(`/boards/${boardId}/cards/${cardId}/tasks/${taskId}/assign`);
-        setTaskMembers(res.data); 
-      } catch (err) {
-        console.error('Failed to fetch task members:', err);
-      }
-    };
-
-    fetchTaskMembers();
-  }, [boardId, cardId, taskId]);
 
   const handleAssignMember = async (memberId) => {
     try {

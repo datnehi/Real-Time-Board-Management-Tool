@@ -6,11 +6,7 @@ const jwt = require('jsonwebtoken');
 exports.createBoard = async (req, res) => {
   const authHeader = req.headers.authorization;
 
-  if (!authHeader) {
-    return res.status(401).json({ error: 'Không có token' });
-  }
-
-  const token = authHeader.split(' ')[1]; 
+  const token = authHeader.split(' ')[1];
   try {
     const decoded = jwt.verify(token, process.env.JWT_SECRET);
     const ownerId = decoded.userId;
@@ -32,6 +28,11 @@ exports.createBoard = async (req, res) => {
 
     await db.collection('boards').doc(boardId).set(newBoard);
 
+    const io = req.app.get('io');
+    if (io) {
+      io.emit('board_created', { id: boardId, ...newBoard });
+    }
+
     res.status(201).json({ id: boardId, ...newBoard });
   } catch (err) {
     console.error('Lỗi xác thực hoặc tạo board:', err);
@@ -40,11 +41,12 @@ exports.createBoard = async (req, res) => {
 };
 
 exports.getBoards = async (req, res) => {
+  const authHeader = req.headers.authorization;
+
+  const token = authHeader.split(' ')[1];
   try {
-    const userId = req.user?.id; 
-    if (!userId) {
-      return res.status(401).json({ error: 'User chưa xác thực' });
-    }
+    const decoded = jwt.verify(token, process.env.JWT_SECRET);
+    const userId = decoded.userId;
 
     const ownerBoardsSnap = await db.collection('boards')
       .where('ownerId', '==', userId)
@@ -86,14 +88,14 @@ exports.getMembers = async (req, res) => {
 
     const boardData = boardSnap.data();
     const memberIds = boardData.members || [];
-    const createdBy = boardData.createdBy;
+    const ownerId = boardData.ownerId;
 
-    if (createdBy && !memberIds.includes(createdBy)) {
-      memberIds.push(createdBy);
+    if (ownerId && !memberIds.includes(ownerId)) {
+      memberIds.push(ownerId);
     }
 
     if (memberIds.length === 0) {
-      return res.json([]); 
+      return res.json([]);
     }
 
     const userFetches = memberIds.map(uid =>
@@ -178,79 +180,6 @@ exports.deleteBoard = async (req, res) => {
   }
 };
 
-exports.inviteToBoard = async (req, res) => {
-  const { boardId } = req.params;
-  const { invite_id, board_owner_id, member_id, email_member, status } = req.body;
-
-  if (!boardId || !invite_id || !board_owner_id || !member_id) {
-    return res.status(400).json({ error: 'Thiếu dữ liệu bắt buộc' });
-  }
-
-  try {
-    const inviteData = {
-      invite_id,
-      board_owner_id,
-      member_id,
-      email_member: email_member || '',
-      status: status || 'pending',
-      createdAt: new Date().toISOString(),
-    };
-
-    await db.collection('boards').doc(boardId)
-      .collection('invites')
-      .doc(invite_id)
-      .set(inviteData);
-
-    const io = req.app.get('io');
-    if (io) {
-      io.to(boardId).emit('board_invited', {
-        boardId,
-        memberId: member_id,
-        email: email_member,
-      });
-    }
-
-    res.status(200).json({ success: true });
-  } catch (err) {
-    console.error('inviteToBoard error:', err);
-    res.status(500).json({ error: 'Không thể mời người vào bảng' });
-  }
-};
-
-exports.acceptBoardInvite = async (req, res) => {
-  const { boardId, id: cardId } = req.params;
-  const { invite_id, member_id, status } = req.body;
-
-  if (!boardId || !invite_id || !member_id || !status) {
-    return res.status(400).json({ error: 'Thiếu dữ liệu bắt buộc' });
-  }
-
-  try {
-    await db.collection('boards').doc(boardId)
-      .collection('invites')
-      .doc(invite_id)
-      .update({ status });
-
-    const boardRef = db.collection('boards').doc(boardId);
-    await boardRef.update({
-      members: admin.firestore.FieldValue.arrayUnion(member_id)
-    });
-
-    const io = req.app.get('io');
-    if (io) {
-      io.to(boardId).emit('member_joined', {
-        boardId,
-        memberId: member_id,
-      });
-    }
-
-    res.status(200).json({ success: true });
-  } catch (err) {
-    console.error('acceptBoardInvite error:', err);
-    res.status(500).json({ error: 'Không thể chấp nhận lời mời' });
-  }
-};
-
 exports.inviteMember = async (req, res) => {
   const { boardId } = req.params;
   const { board_owner_id, email_member } = req.body;
@@ -268,6 +197,16 @@ exports.inviteMember = async (req, res) => {
 
     await db.collection('invitations').doc(invite_id).set(inviteData);
 
+    const io = req.app.get('io');
+    if (io) {
+      io.to(board_owner_id).emit('invitation_sent', {
+        boardId,
+        memberId: member_id,
+        email: email_member,
+        invite_id,
+      });
+    }
+
     res.status(200).json({ success: true });
   } catch (err) {
     res.status(500).json({ error: 'Không thể gửi lời mời' });
@@ -279,10 +218,6 @@ exports.respondToInvitation = async (req, res) => {
   const { invite_id, status } = req.body;
 
   const authHeader = req.headers.authorization;
-
-  if (!authHeader) {
-    return res.status(401).json({ error: 'Không có token' });
-  }
 
   const token = authHeader.split(' ')[1];
 
@@ -321,10 +256,6 @@ exports.respondToInvitation = async (req, res) => {
 
 exports.getInvitations = async (req, res) => {
   const authHeader = req.headers.authorization;
-
-  if (!authHeader) {
-    return res.status(401).json({ error: 'Không có token' });
-  }
 
   const token = authHeader.split(' ')[1];
 

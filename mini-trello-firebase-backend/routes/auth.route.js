@@ -5,7 +5,6 @@ const {
   sendVerificationCode,
   signup,
   signin,
-  githubOAuth,
   getUser,
   updateUser,
 } = require('../controllers/auth.controller');
@@ -13,7 +12,6 @@ const {
 router.post('/send-code', sendVerificationCode);
 router.post('/signup', signup);
 router.post('/signin', signin);
-router.post('/github', githubOAuth);
 router.get('/user', authMiddleware, getUser);
 router.put('/user', authMiddleware, updateUser);
 

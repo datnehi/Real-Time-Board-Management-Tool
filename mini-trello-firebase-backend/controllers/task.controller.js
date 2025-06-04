@@ -25,10 +25,6 @@ exports.createTask = async (req, res) => {
   const { title, description, status } = req.body;
   const authHeader = req.headers.authorization;
 
-  if (!authHeader) {
-    return res.status(401).json({ error: 'Không có token' });
-  }
-
   const token = authHeader.split(' ')[1];
 
   try {
@@ -198,122 +194,122 @@ exports.removeAssignedMember = async (req, res) => {
   }
 };
 
-exports.getRepositoryGithubInfo = async (req, res) => {
-  const { repositoryId } = req.params;
+// exports.getRepositoryGithubInfo = async (req, res) => {
+//   const { repositoryId } = req.params;
 
-  try {
-    const [owner, repo] = repositoryId.split('/');
-    if (!owner || !repo) {
-      return res.status(400).json({ error: 'repositoryId phải theo dạng owner/repo' });
-    }
+//   try {
+//     const [owner, repo] = repositoryId.split('/');
+//     if (!owner || !repo) {
+//       return res.status(400).json({ error: 'repositoryId phải theo dạng owner/repo' });
+//     }
 
-    const branchesResp = await octokit.repos.listBranches({ owner, repo });
-    const branches = branchesResp.data.map(b => ({
-      name: b.name,
-      lastCommitSha: b.commit.sha
-    }));
+//     const branchesResp = await octokit.repos.listBranches({ owner, repo });
+//     const branches = branchesResp.data.map(b => ({
+//       name: b.name,
+//       lastCommitSha: b.commit.sha
+//     }));
 
-    const pullsResp = await octokit.pulls.list({ owner, repo, state: 'open' });
-    const pulls = pullsResp.data.map(p => ({
-      title: p.title,
-      pullNumber: p.number
-    }));
+//     const pullsResp = await octokit.pulls.list({ owner, repo, state: 'open' });
+//     const pulls = pullsResp.data.map(p => ({
+//       title: p.title,
+//       pullNumber: p.number
+//     }));
 
-    const issuesResp = await octokit.issues.listForRepo({ owner, repo, state: 'open' });
-    const issues = issuesResp.data
-      .filter(issue => !issue.pull_request)
-      .map(issue => ({
-        title: issue.title,
-        issueNumber: issue.number
-      }));
+//     const issuesResp = await octokit.issues.listForRepo({ owner, repo, state: 'open' });
+//     const issues = issuesResp.data
+//       .filter(issue => !issue.pull_request)
+//       .map(issue => ({
+//         title: issue.title,
+//         issueNumber: issue.number
+//       }));
 
-    const commitsResp = await octokit.repos.listCommits({ owner, repo, per_page: 30 });
-    const commits = commitsResp.data.map(c => ({
-      sha: c.sha,
-      message: c.commit.message
-    }));
+//     const commitsResp = await octokit.repos.listCommits({ owner, repo, per_page: 30 });
+//     const commits = commitsResp.data.map(c => ({
+//       sha: c.sha,
+//       message: c.commit.message
+//     }));
 
-    res.status(200).json({
-      repositoryId,
-      branches,
-      pulls,
-      issues,
-      commits
-    });
-  } catch (err) {
-    console.error('Error getRepositoryGithubInfo:', err);
-    res.status(500).json({ error: 'Không thể lấy thông tin GitHub repository' });
-  }
-};
+//     res.status(200).json({
+//       repositoryId,
+//       branches,
+//       pulls,
+//       issues,
+//       commits
+//     });
+//   } catch (err) {
+//     console.error('Error getRepositoryGithubInfo:', err);
+//     res.status(500).json({ error: 'Không thể lấy thông tin GitHub repository' });
+//   }
+// };
 
-exports.attachGithubToTask = async (req, res) => {
-  const { boardId, cardId, taskId } = req.params;
-  const { type, number, sha } = req.body;
+// exports.attachGithubToTask = async (req, res) => {
+//   const { boardId, cardId, taskId } = req.params;
+//   const { type, number, sha } = req.body;
 
-  if (!['pull_request', 'commit', 'issue'].includes(type)) {
-    return res.status(400).json({ error: 'type phải là pull_request, commit hoặc issue' });
-  }
-  if ((type === 'commit' && !sha) || ((type === 'pull_request' || type === 'issue') && !number)) {
-    return res.status(400).json({ error: 'Thiếu số pull request/issue hoặc sha commit' });
-  }
+//   if (!['pull_request', 'commit', 'issue'].includes(type)) {
+//     return res.status(400).json({ error: 'type phải là pull_request, commit hoặc issue' });
+//   }
+//   if ((type === 'commit' && !sha) || ((type === 'pull_request' || type === 'issue') && !number)) {
+//     return res.status(400).json({ error: 'Thiếu số pull request/issue hoặc sha commit' });
+//   }
 
-  try {
-    const attachmentData = { type, createdAt: new Date().toISOString() };
-    if (type === 'commit') attachmentData.sha = sha;
-    else attachmentData.number = number;
+//   try {
+//     const attachmentData = { type, createdAt: new Date().toISOString() };
+//     if (type === 'commit') attachmentData.sha = sha;
+//     else attachmentData.number = number;
 
-    const attachRef = await db.collection('boards').doc(boardId)
-      .collection('cards').doc(cardId)
-      .collection('tasks').doc(taskId)
-      .collection('github_attachments').add(attachmentData);
+//     const attachRef = await db.collection('boards').doc(boardId)
+//       .collection('cards').doc(cardId)
+//       .collection('tasks').doc(taskId)
+//       .collection('github_attachments').add(attachmentData);
 
-    res.status(201).json({
-      taskId,
-      attachmentId: attachRef.id,
-      ...attachmentData
-    });
-  } catch (err) {
-    console.error('Error attachGithubToTask:', err);
-    res.status(500).json({ error: 'Không thể gắn GitHub attachment vào task' });
-  }
-};
+//     res.status(201).json({
+//       taskId,
+//       attachmentId: attachRef.id,
+//       ...attachmentData
+//     });
+//   } catch (err) {
+//     console.error('Error attachGithubToTask:', err);
+//     res.status(500).json({ error: 'Không thể gắn GitHub attachment vào task' });
+//   }
+// };
 
-exports.getGithubAttachments = async (req, res) => {
-  const { boardId, cardId, taskId } = req.params;
+// exports.getGithubAttachments = async (req, res) => {
+//   const { boardId, cardId, taskId } = req.params;
 
-  try {
-    const snapshot = await db.collection('boards').doc(boardId)
-      .collection('cards').doc(cardId)
-      .collection('tasks').doc(taskId)
-      .collection('github_attachments').get();
+//   try {
+//     const snapshot = await db.collection('boards').doc(boardId)
+//       .collection('cards').doc(cardId)
+//       .collection('tasks').doc(taskId)
+//       .collection('github_attachments').get();
 
-    const attachments = snapshot.docs.map(doc => ({
-      attachmentId: doc.id,
-      ...doc.data()
-    }));
+//     const attachments = snapshot.docs.map(doc => ({
+//       attachmentId: doc.id,
+//       ...doc.data()
+//     }));
 
-    res.status(200).json(attachments);
-  } catch (err) {
-    console.error('Error getGithubAttachments:', err);
-    res.status(500).json({ error: 'Không thể lấy danh sách GitHub attachments' });
-  }
-};
+//     res.status(200).json(attachments);
+//   } catch (err) {
+//     console.error('Error getGithubAttachments:', err);
+//     res.status(500).json({ error: 'Không thể lấy danh sách GitHub attachments' });
+//   }
+// };
 
-exports.deleteGithubAttachment = async (req, res) => {
-  const { boardId, cardId, taskId, attachmentId } = req.params;
+// exports.deleteGithubAttachment = async (req, res) => {
+//   const { boardId, cardId, taskId, attachmentId } = req.params;
 
-  try {
-    await db.collection('boards').doc(boardId)
-      .collection('cards').doc(cardId)
-      .collection('tasks').doc(taskId)
-      .collection('github_attachments').doc(attachmentId).delete();
+//   try {
+//     await db.collection('boards').doc(boardId)
+//       .collection('cards').doc(cardId)
+//       .collection('tasks').doc(taskId)
+//       .collection('github_attachments').doc(attachmentId).delete();
 
-    res.status(204).send();
-  } catch (err) {
-    console.error('Error deleteGithubAttachment:', err);
-    res.status(500).json({ error: 'Không thể xóa GitHub attachment' });
-  }
-};
+//     res.status(204).send();
+//   } catch (err) {
+//     console.error('Error deleteGithubAttachment:', err);
+//     res.status(500).json({ error: 'Không thể xóa GitHub attachment' });
+//   }
+// };
 
 exports.changecard = async (req, res) => {
   const { taskId, boardId } = req.params;

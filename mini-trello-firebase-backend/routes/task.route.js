@@ -21,10 +21,10 @@ router.get('/:taskId/assign', authMiddleware, taskController.getAssignedMembers)
 
 router.delete('/:taskId/assign/:memberId', authMiddleware, taskController.removeAssignedMember);
 
-router.post('/:taskId/github-attach', authMiddleware, taskController.attachGithubToTask);
+// router.post('/:taskId/github-attach', authMiddleware, taskController.attachGithubToTask);
 
-router.get('/:taskId/github-attachments', authMiddleware, taskController.getGithubAttachments);
+// router.get('/:taskId/github-attachments', authMiddleware, taskController.getGithubAttachments);
 
-router.delete('/:taskId/github-attachments/:attachmentId', authMiddleware, taskController.deleteGithubAttachment);
+// router.delete('/:taskId/github-attachments/:attachmentId', authMiddleware, taskController.deleteGithubAttachment);
 
 module.exports = router;

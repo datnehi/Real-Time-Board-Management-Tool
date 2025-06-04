@@ -6,8 +6,8 @@ import {
 import NotificationsIcon from '@mui/icons-material/Notifications';
 import { useAuth } from '../../context/AuthContext';
 import { Link, useNavigate } from 'react-router-dom';
-import axios from 'axios';
 import api from '../../services/api';
+import socket from '../../services/socket';
 
 const DashboardLayout = ({ children }) => {
   const { user, logout } = useAuth();
@@ -18,6 +18,13 @@ const DashboardLayout = ({ children }) => {
 
   useEffect(() => {
     fetchInvites();
+    socket.on('invitation_sent', (invite) => {
+    setInvitations(prev => [...prev, invite]);
+  });
+
+  return () => {
+    socket.off('invitation_sent');
+  };
   }, []);
 
   const fetchInvites = async () => {
@@ -42,30 +49,15 @@ const DashboardLayout = ({ children }) => {
     setAnchorEl(null);
   };
 
-  const handleAccept = async (inviteId, boardId) => {
+  const handleRespond = async (inviteId, boardId, status) => {
     try {
       await api.post(`/boards/${boardId}/invite/accept`, {
         invite_id: inviteId,
-        status: 'accepted'
+        status
       });
-
-      setInvitations(prev => prev.filter(i => i.invite_id !== inviteId));
-      fetchInvites();
-    } catch (error) {
-      console.error("Accept invite error", error);
-    }
-  };
-
-  const handleDecline = async (inviteId, boardId) => {
-    try {
-      await api.post(`/boards/${boardId}/invite/accept`, {
-        invite_id: inviteId,
-        status: 'declined'
-      });
-
       setInvitations(prev => prev.filter(i => i.invite_id !== inviteId));
     } catch (error) {
-      console.error("Decline invite error", error);
+      console.error(`${status} invite error`, error);
     }
   };
 
@@ -89,6 +81,12 @@ const DashboardLayout = ({ children }) => {
                 anchorEl={anchorEl}
                 open={Boolean(anchorEl)}
                 onClose={handleCloseMenu}
+                PaperProps={{
+                  style: {
+                    maxHeight: 300,
+                    overflow: 'auto',
+                  },
+                }}
               >
                 {Array.isArray(invitations) && invitations.length === 0 ? (
                   <MenuItem disabled>Không có lời mời</MenuItem>
@@ -100,10 +98,10 @@ const DashboardLayout = ({ children }) => {
                         secondary={`Trạng thái: ${invite.status}`}
                       />
                       <Box sx={{ mt: 1, display: 'flex', gap: 1 }}>
-                        <Button size="small" variant="outlined" onClick={() => handleAccept(invite.invite_id, invite.board_id)}>
+                        <Button size="small" variant="outlined" onClick={() => handleRespond(invite.invite_id, invite.board_id, 'accepted')}>
                           Chấp nhận
                         </Button>
-                        <Button size="small" color="error" variant="outlined" onClick={() => handleDecline(invite.invite_id, invite.board_id)}>
+                        <Button size="small" color="error" variant="outlined" onClick={() => handleRespond(invite.invite_id, invite.board_id, 'declined')}>
                           Từ chối
                         </Button>
                       </Box>
